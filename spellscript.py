@@ -31,6 +31,10 @@ class SpellScriptInterpreter:
             statement = statement[:-1]
         if not statement:
             return
+        lower = statement.lower()
+        if "if the signs show" in lower:
+            self.handle_conditional(statement)
+            return
         words = statement.split()
         cmd = words[0].lower()
         if cmd == "summon":
@@ -85,8 +89,46 @@ class SpellScriptInterpreter:
         else:
             raise SyntaxError("use Ponder for <seconds> moments")
 
+    def handle_conditional(self, statement):
+        lower = statement.lower()
+        start = lower.find("if the signs show") + len("if the signs show")
+        end = lower.find("then")
+        if end == -1:
+            raise SyntaxError("conditional must include then")
+        cond = statement[start:end].strip()
+        act = statement[end + len("then"):].strip()
+        if self.evaluate_condition(cond):
+            self.execute_statement(act)
+
+    def evaluate_condition(self, condition):
+        cond = condition.lower().strip()
+        if "equals" in cond:
+            a, b = cond.split("equals", 1)
+            return self.evaluate_expression(a.strip()) == self.evaluate_expression(b.strip())
+        if "greater than" in cond:
+            a, b = cond.split("greater than", 1)
+            return self.evaluate_expression(a.strip()) > self.evaluate_expression(b.strip())
+        if "less than" in cond:
+            a, b = cond.split("less than", 1)
+            return self.evaluate_expression(a.strip()) < self.evaluate_expression(b.strip())
+        if cond == "truth":
+            return True
+        if cond == "falsehood":
+            return False
+        if cond in self.variables:
+            return bool(self.variables[cond])
+        return False
+
     def evaluate_expression(self, expr):
         expr = expr.strip()
+        if "greater by" in expr:
+            a, b = expr.split("greater by", 1)
+            return self.evaluate_expression(a.strip()) + self.evaluate_expression(b.strip())
+        if "lesser by" in expr:
+            a, b = expr.split("lesser by", 1)
+            return self.evaluate_expression(a.strip()) - self.evaluate_expression(b.strip())
+
+
         if expr in self.variables:
             return self.variables[expr]
         try:
