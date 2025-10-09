@@ -108,7 +108,8 @@ class SpellScriptInterpreter:
     def handle_ponder(self, words):
         if len(words) >= 4 and words[1] == "for" and words[3] == "moments":
             try:
-                time.sleep(float(words[2]))
+                duration = self.parse_number(words[2])
+                time.sleep(duration)
             except ValueError:
                 raise SyntaxError("ponder duration must be a number")
         else:
@@ -250,7 +251,7 @@ class SpellScriptInterpreter:
                 body_tokens.append(token)
             self.current_token_index += 1
         
-        
+
         if not body_tokens:
             raise SyntaxError("loop body is empty")
         
@@ -261,6 +262,20 @@ class SpellScriptInterpreter:
         for _ in range(count):
             for action_statement in body_tokens:
                 self.execute_statement(action_statement)
+
+    def parse_number(self, text):
+        text = text.strip()
+        
+        if 'point' in text.lower():
+            text = re.sub(r'point', '.', text, flags=re.IGNORECASE)
+        
+        try:
+            num = float(text)
+            if num.is_integer():
+                return int(num)
+            return num
+        except ValueError:
+            raise ValueError(f"Cannot parse '{text}' as a number")
 
     def evaluate_condition(self, condition):
         cond = condition.lower().strip()
@@ -310,7 +325,7 @@ class SpellScriptInterpreter:
             return self.variables[expr]
         
         try:
-            return float(expr)
+            return self.parse_number(expr)
         except ValueError:
             pass
         
