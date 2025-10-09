@@ -31,6 +31,11 @@ class SpellScriptInterpreter:
             self.current_token_index += 1
             self.execute_statement(statement)
 
+    def remove_filler_words(self, text):
+        text = re.sub(r'\bis\b', '', text, flags=re.IGNORECASE) #add more soon
+        text = re.sub(r'\s+', ' ', text)
+        return text.strip()
+
     def execute_statement(self, statement):
         statement = statement.strip()
         if statement.endswith('.'):
@@ -245,6 +250,7 @@ class SpellScriptInterpreter:
             raise SyntaxError("conditional must include then")
 
         cond = statement[start:then_pos].strip()
+        cond = self.remove_filler_words(cond)
 
         otherwise_pos = lower.find(" otherwise ")
 
