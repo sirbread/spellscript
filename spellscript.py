@@ -39,6 +39,8 @@ class SpellScriptInterpreter:
             self.handle_loop(statement)
             return
         words = statement.split()
+        if not words:
+            return
         cmd = words[0].lower()
         if cmd == "summon":
             self.handle_summon(statement)
@@ -50,6 +52,10 @@ class SpellScriptInterpreter:
             self.handle_ponder(words)
         elif cmd == "banish":
             self.handle_banish(words)
+        elif cmd == "gaze":
+            self.handle_gaze(words)
+        elif cmd == "transmute":
+            self.handle_transmute(words)
         else:
             raise SyntaxError(f"unknown incantation {cmd}")
 
@@ -84,13 +90,16 @@ class SpellScriptInterpreter:
             print(self.variables[msg])
             return
         if msg.startswith('whispers of "') and msg.endswith('"'):
-            print(msg[len('whispers of "'): -1])
+            print(msg[len('whispers of "'):-1])
             return
         print(msg)
 
     def handle_ponder(self, words):
-        if len(words) >= 3 and words[1] == "for" and words[2].isdigit():
-            time.sleep(float(words[2]))
+        if len(words) >= 4 and words[1] == "for" and words[3] == "moments":
+            try:
+                time.sleep(float(words[2]))
+            except ValueError:
+                raise SyntaxError("ponder duration must be a number")
         else:
             raise SyntaxError("use Ponder for <seconds> moments")
 
@@ -125,6 +134,33 @@ class SpellScriptInterpreter:
             del self.variables[name]
         else:
             raise NameError(f"cannot banish unknown entity {name}")
+
+    def handle_gaze(self, words):
+        if len(words) < 3 or words[1].lower() != "upon":
+            raise SyntaxError("use Gaze upon <condition>")
+        condition = " ".join(words[2:])
+        result = self.evaluate_condition(condition)
+        print(f"Gazing reveals: {result}")
+
+    def handle_transmute(self, words):
+        if len(words) < 5 or words[2].lower() != "into":
+            raise SyntaxError("use Transmute <name> into <type>")
+        var_name = words[1]
+        target_type = words[3].lower()
+        if var_name not in self.variables:
+            raise NameError(f"cannot transmute unknown entity {var_name}")
+        value = self.variables[var_name]
+        try:
+            if target_type == "number":
+                self.variables[var_name] = float(value) if '.' in str(value) else int(value)
+            elif target_type == "text":
+                self.variables[var_name] = str(value)
+            elif target_type == "truth":
+                self.variables[var_name] = bool(value)
+            else:
+                raise ValueError(f"unknown transmutation target {target_type}")
+        except Exception as e:
+            raise ValueError(f"failed to transmute {var_name}: {e}")
 
     def evaluate_condition(self, condition):
         cond = condition.lower().strip()
@@ -168,7 +204,7 @@ class SpellScriptInterpreter:
         if expr == "falsehood":
             return False
         if expr.startswith('whispers of "') and expr.endswith('"'):
-            return expr[len('whispers of "'): -1]
+            return expr[len('whispers of "'):-1]
         return expr
 
 def main():
