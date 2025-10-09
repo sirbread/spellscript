@@ -61,11 +61,11 @@ class SpellScriptInterpreter:
         elif cmd == "gaze":
             self.handle_gaze(words)
         elif cmd == "transmute":
-            self.handle_transmute(words)
+            self.handle_transmute(statement)
         elif cmd == "conjure":
             self.handle_conjure(statement)
         elif cmd == "invoke":
-            self.handle_invoke(statement)
+            return self.handle_invoke(statement)
         else:
             raise SyntaxError(f"unknown incantation {cmd}")
 
@@ -131,25 +131,44 @@ class SpellScriptInterpreter:
         result = self.evaluate_condition(condition)
         print(f"Gazing reveals: {result}")
 
-    def handle_transmute(self, words):
-        if len(words) < 5 or words[2].lower() != "into":
+    def handle_transmute(self, statement):
+        if " into " not in statement.lower():
             raise SyntaxError("use Transmute <name> into <type>")
-        var_name = words[1]
-        target_type = words[3].lower()
-        if var_name not in self.variables:
-            raise NameError(f"cannot transmute unknown entity {var_name}")
-        value = self.variables[var_name]
+
+        parts = re.split(r'\s+into\s+', statement, flags=re.IGNORECASE, maxsplit=1)
+        if len(parts) != 2:
+            raise SyntaxError("use Transmute <name> into <type>")
+
+        var_part = parts[0].strip()
+        if var_part.lower().startswith("transmute "):
+            var_name = var_part[len("transmute "):].strip()
+        else:
+            raise SyntaxError("use Transmute <name> into <type>")
+
+        target_type = parts[1].strip().lower()
+
+        if var_name in self.variables:
+            value = self.variables[var_name]
+        else:
+            value = self.evaluate_expression(var_name)
+
         try:
             if target_type == "number":
-                self.variables[var_name] = float(value) if '.' in str(value) else int(value)
+                if isinstance(value, str) and 'point' in value.lower():
+                    value = self.parse_number(value)
+                else:
+                    value = float(value) if '.' in str(value) else int(value)
             elif target_type == "text":
-                self.variables[var_name] = str(value)
+                value = str(value)
             elif target_type == "truth":
-                self.variables[var_name] = bool(value)
+                value = bool(value)
             else:
                 raise ValueError(f"unknown transmutation target {target_type}")
         except Exception as e:
             raise ValueError(f"failed to transmute {var_name}: {e}")
+
+        self.variables[var_name] = value
+        return value
 
     def handle_conjure(self, statement):
         pattern = r'Conjure ritual named (\w+) with (.+?) to (.+)'
@@ -177,9 +196,21 @@ class SpellScriptInterpreter:
         func = self.functions[name]
         params = func["params"]
         if args_str:
-            args = [self.evaluate_expression(a.strip()) for a in args_str.split("and")]
+            args_raw = [a.strip() for a in args_str.split("and")]
+            args = []
+            arg_var_names = []
+            
+            for arg in args_raw:
+                if arg in self.variables:
+                    arg_var_names.append(arg)
+                    args.append(self.variables[arg])
+                else:
+                    arg_var_names.append(None)
+                    args.append(self.evaluate_expression(arg))
         else:
             args = []
+            arg_var_names = []
+            
         if len(args) != len(params):
             raise ValueError(f"ritual {name} expects {len(params)} args, got {len(args)}")
         
@@ -191,10 +222,11 @@ class SpellScriptInterpreter:
         for p, a in zip(params, args):
             self.variables[p] = a
         
-        self.execute_statement(func["body"])
+        result = self.execute_statement(func["body"])
         
-        #print(f"DEBUG: Variables before cleanup: {self.variables}")
-        #print(f"DEBUG: Params to clean: {params}")
+        for i, (param, var_name) in enumerate(zip(params, arg_var_names)):
+            if var_name is not None and param in self.variables:
+                self.variables[var_name] = self.variables[param]
         
         for p in params:
             if p in saved_param_values:
@@ -203,7 +235,7 @@ class SpellScriptInterpreter:
                 if p in self.variables:
                     del self.variables[p]
         
-        #print(f"DEBUG: Variables after cleanup: {self.variables}")
+        return result
 
     def handle_conditional(self, statement):
         lower = statement.lower()
@@ -214,7 +246,7 @@ class SpellScriptInterpreter:
         cond = statement[start:end].strip()
         act = statement[end + len("then"):].strip()
         if self.evaluate_condition(cond):
-            self.execute_statement(act)
+            return self.execute_statement(act)
 
     def handle_loop(self, statement):
         statement = statement.strip()
@@ -254,10 +286,6 @@ class SpellScriptInterpreter:
 
         if not body_tokens:
             raise SyntaxError("loop body is empty")
-        
-        #print(f"DEBUG: Loop will execute these {len(body_tokens)} statements:")
-        #for i, stmt in enumerate(body_tokens):
-            #print(f"  {i+1}. [{stmt}]")
         
         for _ in range(count):
             for action_statement in body_tokens:
