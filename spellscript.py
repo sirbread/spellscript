@@ -7,10 +7,11 @@ class SpellScriptInterpreter:
         self.variables = {}
         self.functions = {}
         self.tokens = []
+        self.current_token_index = 0
 
     def tokenize(self, spell_text):
-        spell_text = re.sub(r'\s+', ' ', spell_text).strip()
-        statements = re.split(r'(?<=\.)\s*', spell_text)
+        pattern = r'((?:[^\."]|"[^"]*")+\.)'
+        statements = re.findall(pattern, spell_text)
         return [s.strip() for s in statements if s.strip()]
 
     def parse_and_execute(self, spell_text):
@@ -23,8 +24,12 @@ class SpellScriptInterpreter:
             raise SyntaxError("spells must begin with Begin the grimoire")
         if "close the grimoire" not in last:
             raise SyntaxError("spells must end with Close the grimoire")
-        for stmt in self.tokens[1:-1]:
-            self.execute_statement(stmt)
+        
+        self.current_token_index = 1
+        while self.current_token_index < len(self.tokens) - 1:
+            statement = self.tokens[self.current_token_index]
+            self.current_token_index += 1
+            self.execute_statement(statement)
 
     def execute_statement(self, statement):
         statement = statement.strip()
@@ -77,16 +82,17 @@ class SpellScriptInterpreter:
         self.variables[name] = val
 
     def handle_enchant(self, statement):
-        parts = statement.split()
-        if len(parts) < 3:
+        pattern = r'Enchant\s+(\w+)\s+with\s+(.+)'
+        match = re.match(pattern, statement, re.IGNORECASE)
+        if not match:
             raise SyntaxError("use Enchant <name> with <value>")
-        name = parts[1]
-        if "with" not in statement:
-            raise SyntaxError("enchant requires with")
-        idx = statement.find("with") + len("with")
-        val = self.evaluate_expression(statement[idx:].strip())
+        name = match.group(1)
+        expr = match.group(2).strip()
+        
         if name not in self.variables:
             raise NameError(f"unknown entity {name}")
+        
+        val = self.evaluate_expression(expr)
         self.variables[name] = val
 
     def handle_inscribe(self, statement):
@@ -151,9 +157,12 @@ class SpellScriptInterpreter:
             raise SyntaxError("use Conjure ritual named <name> with <params> to <body>")
         name, params_str, body = match.groups()
         params = [p.strip() for p in params_str.split("and")]
+        body = body.strip()
+        if body.endswith('.'):
+            body = body[:-1].strip()
         self.functions[name] = {
             "params": params,
-            "body": body.strip()
+            "body": body
         }
 
     def handle_invoke(self, statement):
@@ -172,11 +181,28 @@ class SpellScriptInterpreter:
             args = []
         if len(args) != len(params):
             raise ValueError(f"ritual {name} expects {len(params)} args, got {len(args)}")
-        original_vars = self.variables.copy()
+        
+        saved_param_values = {}
+        for p in params:
+            if p in self.variables:
+                saved_param_values[p] = self.variables[p]
+        
         for p, a in zip(params, args):
             self.variables[p] = a
+        
         self.execute_statement(func["body"])
-        self.variables = original_vars
+        
+        print(f"DEBUG: Variables before cleanup: {self.variables}")
+        print(f"DEBUG: Params to clean: {params}")
+        
+        for p in params:
+            if p in saved_param_values:
+                self.variables[p] = saved_param_values[p]
+            else:
+                if p in self.variables:
+                    del self.variables[p]
+        
+        print(f"DEBUG: Variables after cleanup: {self.variables}")
 
     def handle_conditional(self, statement):
         lower = statement.lower()
@@ -190,16 +216,49 @@ class SpellScriptInterpreter:
             self.execute_statement(act)
 
     def handle_loop(self, statement):
+        statement = statement.strip()
         match = re.search(r'repeat the incantation (\d+) times', statement.lower())
         if not match:
             raise SyntaxError("use Repeat the incantation <number> times do <action>")
         count = int(match.group(1))
-        if "do" not in statement.lower():
-            raise SyntaxError("loop requires 'do' clause")
-        action_start = statement.lower().find("do") + len("do")
-        action = statement[action_start:].strip()
+        
+        body_tokens = []
+        if "do" in statement.lower():
+            do_pos = statement.lower().find("do") + 2
+            body_text = statement[do_pos:].strip()
+            if body_text:
+                body_statements = re.split(r'\.\s+', body_text)
+                for s in body_statements:
+                    s = s.strip()
+                    if s.endswith('.'):
+                        s = s[:-1].strip()
+                    if s:
+                        body_tokens.append(s)
+        
+        while self.current_token_index < len(self.tokens) - 1:
+            token = self.tokens[self.current_token_index]
+            token = token.strip()
+            if token == ".":
+                self.current_token_index += 1
+                break
+            if token.endswith('.'):
+                token = token[:-1]
+            token = token.strip()
+            if token:
+                body_tokens.append(token)
+            self.current_token_index += 1
+        
+        
+        if not body_tokens:
+            raise SyntaxError("loop body is empty")
+        
+        print(f"DEBUG: Loop will execute these {len(body_tokens)} statements:")
+        for i, stmt in enumerate(body_tokens):
+            print(f"  {i+1}. [{stmt}]")
+        
         for _ in range(count):
-            self.execute_statement(action)
+            for action_statement in body_tokens:
+                self.execute_statement(action_statement)
 
     def evaluate_condition(self, condition):
         cond = condition.lower().strip()
@@ -222,28 +281,45 @@ class SpellScriptInterpreter:
 
     def evaluate_expression(self, expr):
         expr = expr.strip()
-        if "greater by" in expr:
-            a, b = expr.split("greater by", 1)
-            return self.evaluate_expression(a.strip()) + self.evaluate_expression(b.strip())
-        if "lesser by" in expr:
-            a, b = expr.split("lesser by", 1)
-            return self.evaluate_expression(a.strip()) - self.evaluate_expression(b.strip())
-
+        
+        if "greater by" in expr.lower():
+            parts = re.split(r'\s+greater by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
+            if len(parts) == 2:
+                a = self.evaluate_expression(parts[0].strip())
+                b = self.evaluate_expression(parts[1].strip())
+                if not isinstance(a, (int, float)):
+                    raise TypeError(f"Expected number, got {type(a).__name__}: {a}")
+                if not isinstance(b, (int, float)):
+                    raise TypeError(f"Expected number, got {type(b).__name__}: {b}")
+                return a + b
+        
+        if "lesser by" in expr.lower():
+            parts = re.split(r'\s+lesser by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
+            if len(parts) == 2:
+                a = self.evaluate_expression(parts[0].strip())
+                b = self.evaluate_expression(parts[1].strip())
+                if not isinstance(a, (int, float)):
+                    raise TypeError(f"Expected number, got {type(a).__name__}: {a}")
+                if not isinstance(b, (int, float)):
+                    raise TypeError(f"Expected number, got {type(b).__name__}: {b}")
+                return a - b
 
         if expr in self.variables:
             return self.variables[expr]
+        
         try:
-            if '.' in expr:
-                return float(expr)
-            return int(expr)
+            return float(expr)
         except ValueError:
             pass
-        if expr == "truth":
+        
+        if expr.lower() == "truth":
             return True
-        if expr == "falsehood":
+        if expr.lower() == "falsehood":
             return False
+        
         if expr.startswith('whispers of "') and expr.endswith('"'):
             return expr[len('whispers of "'):-1]
+        
         return expr
 
 def main():
@@ -261,4 +337,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
