@@ -192,8 +192,8 @@ class SpellScriptInterpreter:
         
         self.execute_statement(func["body"])
         
-        print(f"DEBUG: Variables before cleanup: {self.variables}")
-        print(f"DEBUG: Params to clean: {params}")
+        #print(f"DEBUG: Variables before cleanup: {self.variables}")
+        #print(f"DEBUG: Params to clean: {params}")
         
         for p in params:
             if p in saved_param_values:
@@ -202,7 +202,7 @@ class SpellScriptInterpreter:
                 if p in self.variables:
                     del self.variables[p]
         
-        print(f"DEBUG: Variables after cleanup: {self.variables}")
+        #print(f"DEBUG: Variables after cleanup: {self.variables}")
 
     def handle_conditional(self, statement):
         lower = statement.lower()
@@ -238,12 +238,14 @@ class SpellScriptInterpreter:
         while self.current_token_index < len(self.tokens) - 1:
             token = self.tokens[self.current_token_index]
             token = token.strip()
-            if token == ".":
-                self.current_token_index += 1
-                break
             if token.endswith('.'):
                 token = token[:-1]
             token = token.strip()
+            
+            if token.lower() == "end loop":
+                self.current_token_index += 1
+                break
+            
             if token:
                 body_tokens.append(token)
             self.current_token_index += 1
@@ -252,9 +254,9 @@ class SpellScriptInterpreter:
         if not body_tokens:
             raise SyntaxError("loop body is empty")
         
-        print(f"DEBUG: Loop will execute these {len(body_tokens)} statements:")
-        for i, stmt in enumerate(body_tokens):
-            print(f"  {i+1}. [{stmt}]")
+        #print(f"DEBUG: Loop will execute these {len(body_tokens)} statements:")
+        #for i, stmt in enumerate(body_tokens):
+            #print(f"  {i+1}. [{stmt}]")
         
         for _ in range(count):
             for action_statement in body_tokens:

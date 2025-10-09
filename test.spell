@@ -1,18 +1,1 @@
-Begin the grimoire.
-
-Summon the mana with essence of 100.
-Summon the potion_strength with essence of 5.
-Inscribe whispers of "The ritual begins with mana at:".
-Inscribe mana.
-
-Conjure ritual named DrainMana with amount to Enchant mana with mana lesser by amount.
-
-Repeat the incantation 4 times do Enchant potion_strength with potion_strength greater by 5. Inscribe whispers of "The potion grows stronger:". Inscribe potion_strength. Invoke the ritual DrainMana with 10. Inscribe whispers of "Mana is now:". Inscribe mana. Ponder for 1 moments.
-.
-
-If the signs show potion_strength greater than 20 then Inscribe whispers of "The potion is potent!".
-If the signs show mana less than 70 then Inscribe whispers of "The caster feels a drain on their power.".
-
-Banish the mana.
-
-Close the grimoire.
+Begin the grimoire. Summon the counter with essence of 0. Repeat the incantation 3 times do Enchant counter with counter greater by 15. Inscribe counter. end loop. Close the grimoire.
