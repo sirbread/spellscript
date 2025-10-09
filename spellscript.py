@@ -5,6 +5,7 @@ import time
 class SpellScriptInterpreter:
     def __init__(self):
         self.variables = {}
+        self.functions = {}
         self.tokens = []
 
     def tokenize(self, spell_text):
@@ -56,6 +57,10 @@ class SpellScriptInterpreter:
             self.handle_gaze(words)
         elif cmd == "transmute":
             self.handle_transmute(words)
+        elif cmd == "conjure":
+            self.handle_conjure(statement)
+        elif cmd == "invoke":
+            self.handle_invoke(statement)
         else:
             raise SyntaxError(f"unknown incantation {cmd}")
 
@@ -103,29 +108,6 @@ class SpellScriptInterpreter:
         else:
             raise SyntaxError("use Ponder for <seconds> moments")
 
-    def handle_conditional(self, statement):
-        lower = statement.lower()
-        start = lower.find("if the signs show") + len("if the signs show")
-        end = lower.find("then")
-        if end == -1:
-            raise SyntaxError("conditional must include then")
-        cond = statement[start:end].strip()
-        act = statement[end + len("then"):].strip()
-        if self.evaluate_condition(cond):
-            self.execute_statement(act)
-
-    def handle_loop(self, statement):
-        match = re.search(r'repeat the incantation (\d+) times', statement.lower())
-        if not match:
-            raise SyntaxError("use Repeat the incantation <number> times do <action>")
-        count = int(match.group(1))
-        if "do" not in statement.lower():
-            raise SyntaxError("loop requires 'do' clause")
-        action_start = statement.lower().find("do") + len("do")
-        action = statement[action_start:].strip()
-        for _ in range(count):
-            self.execute_statement(action)
-
     def handle_banish(self, words):
         if len(words) < 3 or words[1].lower() != "the":
             raise SyntaxError("use Banish the <name>")
@@ -161,6 +143,63 @@ class SpellScriptInterpreter:
                 raise ValueError(f"unknown transmutation target {target_type}")
         except Exception as e:
             raise ValueError(f"failed to transmute {var_name}: {e}")
+
+    def handle_conjure(self, statement):
+        pattern = r'Conjure ritual named (\w+) with (.+?) to (.+)'
+        match = re.match(pattern, statement, re.IGNORECASE)
+        if not match:
+            raise SyntaxError("use Conjure ritual named <name> with <params> to <body>")
+        name, params_str, body = match.groups()
+        params = [p.strip() for p in params_str.split("and")]
+        self.functions[name] = {
+            "params": params,
+            "body": body.strip()
+        }
+
+    def handle_invoke(self, statement):
+        pattern = r'Invoke the ritual (\w+)(?: with (.+))?'
+        match = re.match(pattern, statement, re.IGNORECASE)
+        if not match:
+            raise SyntaxError("use Invoke the ritual <name> with <args>")
+        name, args_str = match.groups()
+        if name not in self.functions:
+            raise NameError(f"ritual {name} not found")
+        func = self.functions[name]
+        params = func["params"]
+        if args_str:
+            args = [self.evaluate_expression(a.strip()) for a in args_str.split("and")]
+        else:
+            args = []
+        if len(args) != len(params):
+            raise ValueError(f"ritual {name} expects {len(params)} args, got {len(args)}")
+        original_vars = self.variables.copy()
+        for p, a in zip(params, args):
+            self.variables[p] = a
+        self.execute_statement(func["body"])
+        self.variables = original_vars
+
+    def handle_conditional(self, statement):
+        lower = statement.lower()
+        start = lower.find("if the signs show") + len("if the signs show")
+        end = lower.find("then")
+        if end == -1:
+            raise SyntaxError("conditional must include then")
+        cond = statement[start:end].strip()
+        act = statement[end + len("then"):].strip()
+        if self.evaluate_condition(cond):
+            self.execute_statement(act)
+
+    def handle_loop(self, statement):
+        match = re.search(r'repeat the incantation (\d+) times', statement.lower())
+        if not match:
+            raise SyntaxError("use Repeat the incantation <number> times do <action>")
+        count = int(match.group(1))
+        if "do" not in statement.lower():
+            raise SyntaxError("loop requires 'do' clause")
+        action_start = statement.lower().find("do") + len("do")
+        action = statement[action_start:].strip()
+        for _ in range(count):
+            self.execute_statement(action)
 
     def evaluate_condition(self, condition):
         cond = condition.lower().strip()
