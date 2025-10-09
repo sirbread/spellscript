@@ -3,7 +3,7 @@
 ## todo
 - multi statement functions
 - * and / operators
-- else clause
+- ~~else clause~~
 - user input (scanners?)
 - string concat
 - list/arrays

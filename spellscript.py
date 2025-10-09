@@ -240,13 +240,26 @@ class SpellScriptInterpreter:
     def handle_conditional(self, statement):
         lower = statement.lower()
         start = lower.find("if the signs show") + len("if the signs show")
-        end = lower.find("then")
-        if end == -1:
+        then_pos = lower.find("then")
+        if then_pos == -1:
             raise SyntaxError("conditional must include then")
-        cond = statement[start:end].strip()
-        act = statement[end + len("then"):].strip()
-        if self.evaluate_condition(cond):
-            return self.execute_statement(act)
+
+        cond = statement[start:then_pos].strip()
+
+        otherwise_pos = lower.find(" otherwise ")
+
+        if otherwise_pos != -1:
+            then_action = statement[then_pos + len("then"):otherwise_pos].strip()
+            else_action = statement[otherwise_pos + len(" otherwise "):].strip()
+
+            if self.evaluate_condition(cond):
+                return self.execute_statement(then_action)
+            else:
+                return self.execute_statement(else_action)
+        else:
+            then_action = statement[then_pos + len("then"):].strip()
+            if self.evaluate_condition(cond):
+                return self.execute_statement(then_action)
 
     def handle_loop(self, statement):
         statement = statement.strip()
