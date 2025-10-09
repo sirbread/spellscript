@@ -35,6 +35,9 @@ class SpellScriptInterpreter:
         if "if the signs show" in lower:
             self.handle_conditional(statement)
             return
+        if "repeat the incantation" in lower:
+            self.handle_loop(statement)
+            return
         words = statement.split()
         cmd = words[0].lower()
         if cmd == "summon":
@@ -45,6 +48,8 @@ class SpellScriptInterpreter:
             self.handle_inscribe(statement)
         elif cmd == "ponder":
             self.handle_ponder(words)
+        elif cmd == "banish":
+            self.handle_banish(words)
         else:
             raise SyntaxError(f"unknown incantation {cmd}")
 
@@ -99,6 +104,27 @@ class SpellScriptInterpreter:
         act = statement[end + len("then"):].strip()
         if self.evaluate_condition(cond):
             self.execute_statement(act)
+
+    def handle_loop(self, statement):
+        match = re.search(r'repeat the incantation (\d+) times', statement.lower())
+        if not match:
+            raise SyntaxError("use Repeat the incantation <number> times do <action>")
+        count = int(match.group(1))
+        if "do" not in statement.lower():
+            raise SyntaxError("loop requires 'do' clause")
+        action_start = statement.lower().find("do") + len("do")
+        action = statement[action_start:].strip()
+        for _ in range(count):
+            self.execute_statement(action)
+
+    def handle_banish(self, words):
+        if len(words) < 3 or words[1].lower() != "the":
+            raise SyntaxError("use Banish the <name>")
+        name = words[2]
+        if name in self.variables:
+            del self.variables[name]
+        else:
+            raise NameError(f"cannot banish unknown entity {name}")
 
     def evaluate_condition(self, condition):
         cond = condition.lower().strip()
