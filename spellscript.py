@@ -8,6 +8,7 @@ class SpellScriptInterpreter:
         self.functions = {}
         self.tokens = []
         self.current_token_index = 0
+        self.last_return_value = None
 
     def tokenize(self, spell_text):
         pattern = r'((?:[^\."]|"[^"]*")+\.)'
@@ -32,7 +33,7 @@ class SpellScriptInterpreter:
             self.execute_statement(statement)
 
     def remove_filler_words(self, text):
-        text = re.sub(r'\bis\b', '', text, flags=re.IGNORECASE) #add more soon
+        text = re.sub(r'\bis\b', '', text, flags=re.IGNORECASE)
         text = re.sub(r'\s+', ' ', text)
         return text.strip()
 
@@ -71,15 +72,22 @@ class SpellScriptInterpreter:
             self.handle_conjure(statement)
         elif cmd == "invoke":
             return self.handle_invoke(statement)
+        elif cmd == "return":
+            return self.handle_return(statement)
         else:
             raise SyntaxError(f"unknown incantation {cmd}")
 
     def handle_summon(self, statement):
         parts = statement.split()
         if len(parts) < 3 or parts[1].lower() != "the":
-            raise SyntaxError("use Summon the <name> [with essence of <value>]")
+            raise SyntaxError("use Summon the <name> [with essence of <value>] or [through ritual <name> with <args>]")
         name = parts[2]
-        if "with essence of" in statement:
+        
+        if "through ritual" in statement.lower():
+            idx = statement.lower().find("through ritual") + len("through ritual")
+            ritual_call = statement[idx:].strip()
+            val = self.evaluate_ritual_call(ritual_call)
+        elif "with essence of" in statement:
             idx = statement.find("with essence of") + len("with essence of")
             val = self.evaluate_expression(statement[idx:].strip())
         else:
@@ -87,18 +95,83 @@ class SpellScriptInterpreter:
         self.variables[name] = val
 
     def handle_enchant(self, statement):
-        pattern = r'Enchant\s+(\w+)\s+with\s+(.+)'
+        pattern = r'Enchant\s+(\w+)\s+(.+)'
         match = re.match(pattern, statement, re.IGNORECASE)
         if not match:
-            raise SyntaxError("use Enchant <name> with <value>")
+            raise SyntaxError("use Enchant <name> with <value> or through ritual <name> with <args>")
         name = match.group(1)
-        expr = match.group(2).strip()
+        rest = match.group(2).strip()
         
         if name not in self.variables:
             raise NameError(f"unknown entity {name}")
         
-        val = self.evaluate_expression(expr)
+        if rest.lower().startswith("through ritual"):
+            ritual_call = rest[len("through ritual"):].strip()
+            val = self.evaluate_ritual_call(ritual_call)
+        elif rest.lower().startswith("with"):
+            expr = rest[len("with"):].strip()
+            val = self.evaluate_expression(expr)
+        else:
+            raise SyntaxError("use Enchant <name> with <value> or through ritual <name> with <args>")
+
         self.variables[name] = val
+
+    def evaluate_ritual_call(self, ritual_call):
+        pattern = r'(\w+)(?: with (.+))?'
+        match = re.match(pattern, ritual_call, re.IGNORECASE)
+        if not match:
+            raise SyntaxError("invalid ritual call syntax")
+
+        name = match.group(1)
+        args_str = match.group(2)
+
+        if name not in self.functions:
+            raise NameError(f"ritual {name} not found")
+
+        func = self.functions[name]
+        params = func["params"]
+
+        if args_str:
+            args_raw = [a.strip() for a in args_str.split("and")]
+            args = []
+            arg_var_names = []
+
+            for arg in args_raw:
+                if arg in self.variables:
+                    arg_var_names.append(arg)
+                    args.append(self.variables[arg])
+                else:
+                    arg_var_names.append(None)
+                    args.append(self.evaluate_expression(arg))
+        else:
+            args = []
+            arg_var_names = []
+
+        if len(args) != len(params):
+            raise ValueError(f"ritual {name} expects {len(params)} args, got {len(args)}")
+
+        saved_param_values = {}
+        for p in params:
+            if p in self.variables:
+                saved_param_values[p] = self.variables[p]
+
+        for p, a in zip(params, args):
+            self.variables[p] = a
+
+        result = self.execute_statement(func["body"])
+
+        for i, (param, var_name) in enumerate(zip(params, arg_var_names)):
+            if var_name is not None and param in self.variables:
+                self.variables[var_name] = self.variables[param]
+
+        for p in params:
+            if p in saved_param_values:
+                self.variables[p] = saved_param_values[p]
+            else:
+                if p in self.variables:
+                    del self.variables[p]
+
+        return result
 
     def handle_inscribe(self, statement):
         msg = statement[len("inscribe "):].strip()
@@ -190,6 +263,13 @@ class SpellScriptInterpreter:
             "body": body
         }
 
+    def handle_return(self, statement):
+        parts = statement.split(maxsplit=1)
+        if len(parts) < 2:
+            raise SyntaxError("use Return <value>")
+        value_expr = parts[1].strip()
+        return self.evaluate_expression(value_expr)
+
     def handle_invoke(self, statement):
         pattern = r'Invoke the ritual (\w+)(?: with (.+))?'
         match = re.match(pattern, statement, re.IGNORECASE)
@@ -240,6 +320,7 @@ class SpellScriptInterpreter:
                 if p in self.variables:
                     del self.variables[p]
         
+        self.last_return_value = result
         return result
 
     def handle_conditional(self, statement):
@@ -345,6 +426,30 @@ class SpellScriptInterpreter:
 
     def evaluate_expression(self, expr):
         expr = expr.strip()
+        
+        if "through ritual" in expr.lower():
+            pattern = r'through ritual (.+)'
+            match = re.search(pattern, expr, re.IGNORECASE)
+            if match:
+                ritual_call = match.group(1).strip()
+                return self.evaluate_ritual_call(ritual_call)
+
+        if "invoke the ritual" in expr.lower():
+            pattern = r'invoke the ritual (\w+)(?: with (.+))?'
+            match = re.search(pattern, expr, re.IGNORECASE)
+            if match:
+                invoke_start = match.start()
+                invoke_end = match.end()
+
+                result = self.handle_invoke(expr[invoke_start:invoke_end])
+
+                remaining = expr[:invoke_start] + str(result) + expr[invoke_end:]
+                remaining = remaining.strip()
+
+                if remaining and remaining != str(result):
+                    return self.evaluate_expression(remaining)
+
+                return result
         
         if "greater by" in expr.lower():
             parts = re.split(r'\s+greater by\s+', expr, flags=re.IGNORECASE, maxsplit=1)

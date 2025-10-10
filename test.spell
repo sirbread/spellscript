@@ -1,21 +1,9 @@
 Begin the grimoire.
-Summon the a with essence of 10.
-Summon the b with essence of 3.
-
-Summon the product with essence of a multiplied by b.
-Inscribe whispers of "10 * 3 =".
-Inscribe product.
-
-Summon the quotient with essence of a divided by b.
-Inscribe whispers of "10 / 3 =".
-Inscribe quotient.
-
-Summon the exact with essence of 20 divided by 4.
-Inscribe whispers of "20 / 4 =".
-Inscribe exact.
-
-Enchant a with a multiplied by a.
-Inscribe whispers of "10 * 10 =".
-Inscribe a.
-
+Conjure ritual named doubleAPotion with potionmL to Return potionmL multiplied by 2.
+Summon the result through ritual doubleAPotion with 5.
+Inscribe whispers of "Result:".
+Inscribe result.
+Enchant result through ritual doubleAPotion with 10.
+Inscribe whispers of "New result:".
+Inscribe result.
 Close the grimoire.
