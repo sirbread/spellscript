@@ -1,121 +1,21 @@
 Begin the grimoire.
-Summon the counter with essence of 0.
-Summon the age with essence of 25.
-Summon the pi with essence of 3point14159.
-Summon the message with essence of whispers of "testing spellscript".
-Inscribe whispers of "spellscript full stresstest".
-Inscribe message.
-Enchant counter with 1.
-Inscribe whispers of "Counter initialized to:".
-Inscribe counter.
-Transmute 42point5 into number.
-Inscribe whispers of "Transmuted 42point5:".
-Inscribe 42point5.
-Transmute age into text.
-Inscribe whispers of "Age as text:".
-Inscribe age.
-Transmute age into number.
-Inscribe whispers of "Testing arithmetic:".
 Summon the a with essence of 10.
-Summon the b with essence of 5.
-Summon the sum with essence of a greater by b.
-Inscribe whispers of "10 + 5 =".
-Inscribe sum.
-Summon the diff with essence of a lesser by b.
-Inscribe whispers of "10 - 5 =".
-Inscribe diff.
-Inscribe whispers of "Testing conditionals without else:".
-If the signs show age is greater than 18 then Inscribe whispers of "Age check passed: Adult".
-Inscribe whispers of "Testing conditionals with else:".
-If the signs show counter is equals 1 then Inscribe whispers of "Counter is 1" otherwise Inscribe whispers of "Counter is not 1".
-If the signs show counter is greater than 100 then Inscribe whispers of "Counter is big" otherwise Inscribe whispers of "Counter is small".
-Inscribe whispers of "Testing comparison operators:".
-If the signs show a is greater than b then Inscribe whispers of "10 > 5: TRUE".
-If the signs show b is less than a then Inscribe whispers of "5 < 10: TRUE".
-If the signs show a is equals 10 then Inscribe whispers of "10 == 10: TRUE".
-Inscribe whispers of "Testing loops:".
-Repeat the incantation 3 times do Enchant counter with counter greater by 1.
-Inscribe counter.
-end loop.
-Inscribe whispers of "Testing nested expressions:".
-Summon the x with essence of 5.
-Enchant x with x greater by x.
-Enchant x with x greater by 2.
-Inscribe whispers of "x after operations:".
-Inscribe x.
-Inscribe whispers of "Testing Gaze:".
-Gaze upon x greater than 10.
-Inscribe whispers of "Testing functions (rituals):".
-Conjure ritual named double with num to Enchant num with num greater by num.
-Summon the val with essence of 7.
-Inscribe whispers of "Value before double:".
-Inscribe val.
-Invoke the ritual double with val.
-Inscribe whispers of "Value after double:".
-Inscribe val.
-Conjure ritual named addTwo with a and b to Enchant a with a greater by b.
-Summon the first with essence of 100.
-Summon the second with essence of 50.
-Inscribe whispers of "First before addTwo:".
-Inscribe first.
-Invoke the ritual addTwo with first and second.
-Inscribe whispers of "First after addTwo:".
-Inscribe first.
-Inscribe whispers of "Testing complex conditions:".
-Summon the flag with essence of truth.
-If the signs show flag is equals truth then Inscribe whispers of "Flag is TRUE".
-Enchant flag with falsehood.
-If the signs show flag is equals falsehood then Inscribe whispers of "Flag is now FALSE".
-Inscribe whispers of "Testing Banish:".
-Summon the temp with essence of 999.
-Inscribe whispers of "Created temp variable".
-Banish the temp.
-Inscribe whispers of "Banished temp variable".
-Inscribe whispers of "Testing Ponder:".
-Inscribe whispers of "Waiting 1 second...".
-Ponder for 1 moments.
-Inscribe whispers of "Done waiting!".
-Inscribe whispers of "Testing decimal operations:".
-Summon the decimal1 with essence of 1point5.
-Summon the decimal2 with essence of 2point5.
-Enchant decimal1 with decimal1 greater by decimal2.
-Inscribe whispers of "1.5 + 2.5 =".
-Inscribe decimal1.
-Inscribe whispers of "Testing string literals:".
-Inscribe whispers of "Hello from SpellScript!".
-Inscribe whispers of "Special characters: @#$%^&*()".
-Inscribe whispers of "Numbers in strings: 123456".
-Inscribe whispers of "Testing variable reassignment:".
-Summon the mutable with essence of 1.
-Inscribe mutable.
-Enchant mutable with 2.
-Inscribe mutable.
-Enchant mutable with 3.
-Inscribe mutable.
-Enchant mutable with mutable greater by 10.
-Inscribe mutable.
-Inscribe whispers of "Testing loop with complex body:".
-Summon the loopvar with essence of 0.
-Repeat the incantation 5 times do Enchant loopvar with loopvar greater by 2.
-If the signs show loopvar is greater than 5 then Inscribe whispers of "Loop var is big" otherwise Inscribe whispers of "Loop var is small".
-end loop.
-Inscribe whispers of "Final loop var value:".
-Inscribe loopvar.
-Inscribe whispers of "Testing function with literal arguments:".
-Conjure ritual named tripleIt with n to Enchant n with n greater by n greater by n.
-Summon the testval with essence of 3.
-Invoke the ritual tripleIt with testval.
-Inscribe whispers of "3 tripled is:".
-Inscribe testval.
-Inscribe whispers of "Testing all comparison types in sequence:".
-Summon the cmp with essence of 50.
-If the signs show cmp is greater than 40 then Inscribe whispers of "50 > 40: PASS".
-If the signs show cmp is less than 60 then Inscribe whispers of "50 < 60: PASS".
-If the signs show cmp is equals 50 then Inscribe whispers of "50 == 50: PASS".
-Inscribe whispers of "Testing truth/falsehood values:".
-Summon the bool1 with essence of truth.
-Summon the bool2 with essence of falsehood.
-If the signs show bool1 then Inscribe whispers of "bool1 is truthy".
-If the signs show bool2 then Inscribe whispers of "This should not print" otherwise Inscribe whispers of "bool2 is falsy".
-Inscribe whispers of "all tests done".
+Summon the b with essence of 3.
+
+Summon the product with essence of a multiplied by b.
+Inscribe whispers of "10 * 3 =".
+Inscribe product.
+
+Summon the quotient with essence of a divided by b.
+Inscribe whispers of "10 / 3 =".
+Inscribe quotient.
+
+Summon the exact with essence of 20 divided by 4.
+Inscribe whispers of "20 / 4 =".
+Inscribe exact.
+
+Enchant a with a multiplied by a.
+Inscribe whispers of "10 * 10 =".
+Inscribe a.
+
 Close the grimoire.

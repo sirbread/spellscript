@@ -367,6 +367,34 @@ class SpellScriptInterpreter:
                 if not isinstance(b, (int, float)):
                     raise TypeError(f"Expected number, got {type(b).__name__}: {b}")
                 return a - b
+        
+        if "multiplied by" in expr.lower():
+            parts = re.split(r'\s+multiplied by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
+            if len(parts) == 2:
+                a = self.evaluate_expression(parts[0].strip())
+                b = self.evaluate_expression(parts[1].strip())
+                if not isinstance(a, (int, float)):
+                    raise TypeError(f"Expected number, got {type(a).__name__}: {a}")
+                if not isinstance(b, (int, float)):
+                    raise TypeError(f"Expected number, got {type(b).__name__}: {b}")
+                return a * b
+
+        if "divided by" in expr.lower():
+            parts = re.split(r'\s+divided by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
+            if len(parts) == 2:
+                a = self.evaluate_expression(parts[0].strip())
+                b = self.evaluate_expression(parts[1].strip())
+                if not isinstance(a, (int, float)):
+                    raise TypeError(f"Expected number, got {type(a).__name__}: {a}")
+                if not isinstance(b, (int, float)):
+                    raise TypeError(f"Expected number, got {type(b).__name__}: {b}")
+                if b == 0:
+                    raise ZeroDivisionError("Cannot divide by zero")
+                result = a / b
+                if isinstance(a, int) and isinstance(b, int) and result.is_integer():
+                    return int(result)
+                return result
+
 
         if expr in self.variables:
             return self.variables[expr]

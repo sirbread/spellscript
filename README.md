@@ -2,7 +2,7 @@
 
 ## todo
 - multi statement functions
-- * and / operators
+- ~~* and / operators~~
 - ~~else clause~~
 - user input (scanners?)
 - string concat
