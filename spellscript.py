@@ -158,7 +158,11 @@ class SpellScriptInterpreter:
         for p, a in zip(params, args):
             self.variables[p] = a
 
-        result = self.execute_statement(func["body"])
+        result = None
+        for body_statement in func["body"]:
+            result = self.execute_statement(body_statement)
+            if result is not None and body_statement.strip().lower().startswith("return"):
+                break
 
         for i, (param, var_name) in enumerate(zip(params, arg_var_names)):
             if var_name is not None and param in self.variables:
@@ -249,19 +253,39 @@ class SpellScriptInterpreter:
         return value
 
     def handle_conjure(self, statement):
-        pattern = r'Conjure ritual named (\w+) with (.+?) to (.+)'
-        match = re.match(pattern, statement, re.IGNORECASE)
-        if not match:
-            raise SyntaxError("use Conjure ritual named <name> with <params> to <body>")
-        name, params_str, body = match.groups()
-        params = [p.strip() for p in params_str.split("and")]
-        body = body.strip()
-        if body.endswith('.'):
-            body = body[:-1].strip()
-        self.functions[name] = {
-            "params": params,
-            "body": body
-        }
+        lower = statement.lower()
+
+        if " to begin" in lower:
+            pattern = r'Conjure ritual named (\w+) with (.+?) to begin'
+            match = re.match(pattern, statement, re.IGNORECASE)
+            if not match:
+                raise SyntaxError("use Conjure ritual named <name> with <params> to begin ... end ritual")
+            name, params_str = match.groups()
+            params = [p.strip() for p in params_str.split("and")]
+
+            body_statements = []
+            while self.current_token_index < len(self.tokens) - 1:
+                token = self.tokens[self.current_token_index]
+                token = token.strip()
+                if token.endswith('.'):
+                    token = token[:-1]
+                token = token.strip()
+
+                if token.lower() == "end ritual":
+                    self.current_token_index += 1
+                    break
+
+                if token:
+                    body_statements.append(token)
+                self.current_token_index += 1
+
+            if not body_statements:
+                raise SyntaxError("ritual body is empty")
+
+            self.functions[name] = {
+                "params": params,
+                "body": body_statements
+            }
 
     def handle_return(self, statement):
         parts = statement.split(maxsplit=1)
@@ -307,7 +331,11 @@ class SpellScriptInterpreter:
         for p, a in zip(params, args):
             self.variables[p] = a
         
-        result = self.execute_statement(func["body"])
+        result = None
+        for body_statement in func["body"]:
+            result = self.execute_statement(body_statement)
+            if result is not None and body_statement.strip().lower().startswith("return"):
+                break
         
         for i, (param, var_name) in enumerate(zip(params, arg_var_names)):
             if var_name is not None and param in self.variables:

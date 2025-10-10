@@ -1,9 +1,9 @@
 Begin the grimoire.
-Conjure ritual named doubleAPotion with potionmL to Return potionmL multiplied by 2.
-Summon the result through ritual doubleAPotion with 5.
+
+Conjure ritual named calculateArea with width and height to begin Inscribe whispers of "Calculating area...". Summon the area with essence of width multiplied by height. Inscribe whispers of "Area calculated!". Return area. end ritual.
+
+Summon the result through ritual calculateArea with 10 and 5.
 Inscribe whispers of "Result:".
 Inscribe result.
-Enchant result through ritual doubleAPotion with 10.
-Inscribe whispers of "New result:".
-Inscribe result.
+
 Close the grimoire.
