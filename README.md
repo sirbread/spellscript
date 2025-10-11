@@ -4,7 +4,7 @@
 - ~~multi statement functions~~
 - ~~* and / operators~~
 - ~~else clause~~
-- user input (scanners?)
+- ~~user input~~
 - string concat
 - list/arrays
 - ~~comparison chaining or logical operators~~

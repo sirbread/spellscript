@@ -1,15 +1,13 @@
 Begin the grimoire.
 
-Summon the age with essence of 25.
-Summon the hasLicense with essence of truth.
-Summon the isBlocked with essence of falsehood.
+Inquire whispers of "What is your name?" into name.
+Inscribe whispers of "Hello".
+Inscribe name.
 
-If the signs show age greater than 18 and hasLicense equals truth then Inscribe whispers of "can drive!".
+Inquire whispers of "Enter your age:" into ageText.
+Transmute ageText into number.
+Summon the age with essence of ageText.
 
-If the signs show age less than 13 or age greater than 65 then Inscribe whispers of "discount applies!" otherwise Inscribe whispers of "full price".
-
-If the signs show not isBlocked then Inscribe whispers of "access granted".
-
-If the signs show age greater than 21 and hasLicense equals truth and not isBlocked then Inscribe whispers of "can rent a car!".
+If the signs show age greater than 18 then Inscribe whispers of "You are an adult!" otherwise Inscribe whispers of "You are a minor.".
 
 Close the grimoire.

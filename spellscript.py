@@ -60,6 +60,8 @@ class SpellScriptInterpreter:
             self.handle_enchant(statement)
         elif cmd == "inscribe":
             self.handle_inscribe(statement)
+        elif cmd == "inquire":
+            self.handle_inquire(statement)
         elif cmd == "ponder":
             self.handle_ponder(words)
         elif cmd == "banish":
@@ -115,6 +117,15 @@ class SpellScriptInterpreter:
             raise SyntaxError("use Enchant <name> with <value> or through ritual <name> with <args>")
 
         self.variables[name] = val
+
+    def handle_inquire(self, statement):
+        pattern = r'Inquire\s+whispers of\s+"([^"]*)"\s+into\s+(\w+)'
+        match = re.match(pattern, statement, re.IGNORECASE)
+        if not match:
+            raise SyntaxError('use Inquire whispers of "prompt" into <name>')
+
+        prompt = match.group(1)
+        var_name = match.group(2)
 
     def evaluate_ritual_call(self, ritual_call):
         pattern = r'(\w+)(?: with (.+))?'
