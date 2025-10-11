@@ -448,22 +448,50 @@ class SpellScriptInterpreter:
             raise ValueError(f"Cannot parse '{text}' as a number")
 
     def evaluate_condition(self, condition):
-        cond = condition.lower().strip()
-        if "equals" in cond:
-            a, b = cond.split("equals", 1)
-            return self.evaluate_expression(a.strip()) == self.evaluate_expression(b.strip())
-        if "greater than" in cond:
-            a, b = cond.split("greater than", 1)
-            return self.evaluate_expression(a.strip()) > self.evaluate_expression(b.strip())
-        if "less than" in cond:
-            a, b = cond.split("less than", 1)
-            return self.evaluate_expression(a.strip()) < self.evaluate_expression(b.strip())
-        if cond == "truth":
-            return True
-        if cond == "falsehood":
+        cond_lower = condition.lower()
+
+        or_parts = re.split(r'\s+or\s+', cond_lower, flags=re.IGNORECASE)
+        if len(or_parts) > 1:
+            or_parts_orig = re.split(r'\s+or\s+', condition, flags=re.IGNORECASE)
+            for part in or_parts_orig:
+                if self.evaluate_condition(part.strip()):
+                    return True
             return False
-        if cond in self.variables:
-            return bool(self.variables[cond])
+
+        and_parts = re.split(r'\s+and\s+', cond_lower, flags=re.IGNORECASE)
+        if len(and_parts) > 1:
+            and_parts_orig = re.split(r'\s+and\s+', condition, flags=re.IGNORECASE)
+            for part in and_parts_orig:
+                if not self.evaluate_condition(part.strip()):
+                    return False
+            return True
+
+        if cond_lower.startswith("not "):
+            inner = condition[4:].strip()
+            return not self.evaluate_condition(inner)
+
+        if " equals " in cond_lower:
+            parts = re.split(r'\s+equals\s+', condition, flags=re.IGNORECASE, maxsplit=1)
+            a, b = parts[0].strip(), parts[1].strip()
+            return self.evaluate_expression(a) == self.evaluate_expression(b)
+
+        if " greater than " in cond_lower:
+            parts = re.split(r'\s+greater than\s+', condition, flags=re.IGNORECASE, maxsplit=1)
+            a, b = parts[0].strip(), parts[1].strip()
+            return self.evaluate_expression(a) > self.evaluate_expression(b)
+        if " less than " in cond_lower:
+            parts = re.split(r'\s+less than\s+', condition, flags=re.IGNORECASE, maxsplit=1)
+            a, b = parts[0].strip(), parts[1].strip()
+            return self.evaluate_expression(a) < self.evaluate_expression(b)
+        
+        if cond_lower == "truth":
+            return True
+        if cond_lower == "falsehood":
+            return False
+        
+        if condition.strip() in self.variables:
+            return bool(self.variables[condition.strip()])
+        
         return False
 
     def evaluate_expression(self, expr):

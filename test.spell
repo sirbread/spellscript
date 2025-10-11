@@ -1,12 +1,15 @@
 Begin the grimoire.
 
-Conjure ritual named calculateArea with width and height to begin: Inscribe whispers of "Calculating area...".
-    Summon the area with essence of width multiplied by height.
-    Return area.
-End ritual.
+Summon the age with essence of 25.
+Summon the hasLicense with essence of truth.
+Summon the isBlocked with essence of falsehood.
 
-Summon the result through ritual calculateArea with 10 and 5.
-Inscribe whispers of "Result:".
-Inscribe result.
+If the signs show age greater than 18 and hasLicense equals truth then Inscribe whispers of "can drive!".
+
+If the signs show age less than 13 or age greater than 65 then Inscribe whispers of "discount applies!" otherwise Inscribe whispers of "full price".
+
+If the signs show not isBlocked then Inscribe whispers of "access granted".
+
+If the signs show age greater than 21 and hasLicense equals truth and not isBlocked then Inscribe whispers of "can rent a car!".
 
 Close the grimoire.
