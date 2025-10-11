@@ -126,6 +126,8 @@ class SpellScriptInterpreter:
 
         prompt = match.group(1)
         var_name = match.group(2)
+        user_input = input(prompt + " ")
+        self.variables[var_name] = user_input
 
     def evaluate_ritual_call(self, ritual_call):
         pattern = r'(\w+)(?: with (.+))?'
@@ -531,6 +533,14 @@ class SpellScriptInterpreter:
                     return self.evaluate_expression(remaining)
 
                 return result
+        
+        if " bound with " in expr.lower():
+            parts = re.split(r'\s+bound with\s+', expr, flags=re.IGNORECASE)
+            result = ""
+            for part in parts:
+                val = self.evaluate_expression(part.strip())
+                result += str(val)
+            return result
         
         if "multiplied by" in expr.lower():
             parts = re.split(r'\s+multiplied by\s+', expr, flags=re.IGNORECASE, maxsplit=1)

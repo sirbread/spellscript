@@ -1,13 +1,18 @@
 Begin the grimoire.
 
-Inquire whispers of "What is your name?" into name.
-Inscribe whispers of "Hello".
-Inscribe name.
+Inquire whispers of "What is your first name?" into firstName.
+Inquire whispers of "What is your last name?" into lastName.
+
+Summon the fullName with essence of firstName bound with whispers of " " bound with lastName.
+Summon the greeting with essence of whispers of "Hello, " bound with fullName bound with whispers of "!".
+
+Inscribe greeting.
 
 Inquire whispers of "Enter your age:" into ageText.
 Transmute ageText into number.
 Summon the age with essence of ageText.
 
-If the signs show age greater than 18 then Inscribe whispers of "You are an adult!" otherwise Inscribe whispers of "You are a minor.".
+Summon the message with essence of whispers of "You are " bound with age bound with whispers of " years old.".
+Inscribe message.
 
 Close the grimoire.
