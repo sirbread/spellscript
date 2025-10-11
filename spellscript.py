@@ -50,6 +50,9 @@ class SpellScriptInterpreter:
         if "repeat the incantation" in lower:
             self.handle_loop(statement)
             return
+        if lower.startswith("traverse "):
+            self.handle_traverse(statement)
+            return
         words = statement.split()
         if not words:
             return
@@ -178,6 +181,77 @@ class SpellScriptInterpreter:
 
         value = self.evaluate_expression(value_expr)
         array.append(value)
+
+    def handle_traverse(self, statement):
+        # P1: traverse <array> with each <item> to begin:
+        # P2: traverse <array> with each <item> at <index> to begin:
+
+        pattern_with_index = r'Traverse\s+(\w+)\s+with each\s+(\w+)\s+at\s+(\w+)\s+to begin'
+        pattern_simple = r'Traverse\s+(\w+)\s+with each\s+(\w+)\s+to begin'
+
+        match_with_index = re.match(pattern_with_index, statement, re.IGNORECASE)
+        match_simple = re.match(pattern_simple, statement, re.IGNORECASE)
+
+        if match_with_index:
+            array_name = match_with_index.group(1)
+            item_var = match_with_index.group(2)
+            index_var = match_with_index.group(3)
+            has_index = True
+        elif match_simple:
+            array_name = match_simple.group(1)
+            item_var = match_simple.group(2)
+            index_var = None
+            has_index = False
+        else:
+            raise SyntaxError("use Traverse <array> with each <item> to begin: ... end traverse or Traverse <array> with each <item> at <index> to begin: ... end traverse")
+
+        if array_name not in self.variables:
+            raise NameError(f"unknown entity {array_name}")
+
+        array = self.variables[array_name]
+        if not isinstance(array, list):
+            raise TypeError(f"{array_name} is not a collection")
+
+        body_statements = []
+        while self.current_token_index < len(self.tokens) - 1:
+            token = self.tokens[self.current_token_index]
+            self.current_token_index += 1
+
+            token = token.strip()
+            if token.endswith('.') or token.endswith(':'):
+                token = token[:-1]
+            token = token.strip()
+
+            if token.lower() == "end traverse":
+                break
+
+            if token:
+                body_statements.append(token)
+
+        if not body_statements:
+            raise SyntaxError("traverse body is empty")
+
+        saved_item = self.variables.get(item_var)
+        saved_index = self.variables.get(index_var) if has_index else None
+
+        for idx, item in enumerate(array):
+            self.variables[item_var] = item
+            if has_index:
+                self.variables[index_var] = idx
+
+            for body_statement in body_statements:
+                self.execute_statement(body_statement)
+
+        if saved_item is not None:
+            self.variables[item_var] = saved_item
+        elif item_var in self.variables:
+            del self.variables[item_var]
+
+        if has_index:
+            if saved_index is not None:
+                self.variables[index_var] = saved_index
+            elif index_var in self.variables:
+                del self.variables[index_var]
 
     def evaluate_ritual_call(self, ritual_call):
         pattern = r'(\w+)(?: with (.+))?'
