@@ -2,6 +2,12 @@ import re
 import sys
 import time
 
+class ExecutionContext:
+    def __init__(self, source='main', body_statements=None, start_index=0):
+        self.source = source
+        self.body_statements = body_statements or []
+        self.current_index = start_index
+
 class SpellScriptInterpreter:
     def __init__(self):
         self.variables = {}
@@ -9,12 +15,9 @@ class SpellScriptInterpreter:
         self.tokens = []
         self.current_token_index = 0
         self.last_return_value = None
-
-    def remove_comments(self, text):
-        return re.sub(r'\([^)]*\)', '', text)
+        self.context_stack = []
 
     def tokenize(self, spell_text):
-        spell_text = self.remove_comments(spell_text)
         pattern = r'((?:[^\.":"]|"[^"]*")+[\.:])'
         statements = re.findall(pattern, spell_text)
         return [s.strip() for s in statements if s.strip()]
@@ -49,14 +52,11 @@ class SpellScriptInterpreter:
             return
         lower = statement.lower()
         if "if the signs show" in lower:
-            self.handle_conditional(statement)
-            return
+            return self.handle_conditional(statement)
         if "repeat the incantation" in lower:
-            self.handle_loop(statement)
-            return
+            return self.handle_loop(statement)
         if lower.startswith("traverse "):
-            self.handle_traverse(statement)
-            return
+            return self.handle_traverse(statement)
         words = statement.split()
         if not words:
             return
@@ -91,14 +91,10 @@ class SpellScriptInterpreter:
     def handle_summon(self, statement):
         parts = statement.split()
         if len(parts) < 3 or parts[1].lower() != "the":
-            raise SyntaxError("use Summon the <name> [with essence of <value>] or [through ritual <name> with <args>]")
+            raise SyntaxError("use Summon the <name> [with essence of <value>]")
         name = parts[2]
         
-        if "through ritual" in statement.lower():
-            idx = statement.lower().find("through ritual") + len("through ritual")
-            ritual_call = statement[idx:].strip()
-            val = self.evaluate_ritual_call(ritual_call)
-        elif "with essence of" in statement:
+        if "with essence of" in statement:
             idx = statement.find("with essence of") + len("with essence of")
             val = self.evaluate_expression(statement[idx:].strip())
         else:
@@ -172,24 +168,86 @@ class SpellScriptInterpreter:
         match = re.match(pattern, statement, re.IGNORECASE)
         if not match:
             raise SyntaxError("use Append <value> to <array>")
-
+        
         value_expr = match.group(1).strip()
         array_name = match.group(2).strip()
-
+        
         if array_name not in self.variables:
             raise NameError(f"unknown entity {array_name}")
-
+        
         array = self.variables[array_name]
         if not isinstance(array, list):
             raise TypeError(f"{array_name} is not a collection")
-
+        
         value = self.evaluate_expression(value_expr)
         array.append(value)
 
-    def handle_traverse(self, statement):
-        # P1: traverse <array> with each <item> to begin:
-        # P2: traverse <array> with each <item> at <index> to begin:
+    def collect_block_from_context(self, end_keyword):
+        body_statements = []
+        depth = 0
+        
+        if end_keyword == "end loop":
+            start_patterns = ["repeat the incantation"]
+        elif end_keyword == "end traverse":
+            start_patterns = ["traverse "]
+        elif end_keyword == "end ritual":
+            start_patterns = ["conjure ritual named"]
+        else:
+            start_patterns = []
+        
+        if self.context_stack:
+            context = self.context_stack[-1]
+            while context.current_index < len(context.body_statements):
+                token = context.body_statements[context.current_index]
+                context.current_index += 1
+                
+                token = token.strip()
+                if token.endswith('.') or token.endswith(':'):
+                    token = token[:-1]
+                token = token.strip()
+                
+                token_lower = token.lower()
+                
+                is_start = any(pattern in token_lower for pattern in start_patterns)
+                if is_start and "to begin" in token_lower:
+                    depth += 1
+                    body_statements.append(token)
+                elif token_lower == end_keyword:
+                    if depth == 0:
+                        break
+                    else:
+                        depth -= 1
+                        body_statements.append(token)
+                elif token:
+                    body_statements.append(token)
+        else:
+            while self.current_token_index < len(self.tokens) - 1:
+                token = self.tokens[self.current_token_index]
+                self.current_token_index += 1
+                
+                token = token.strip()
+                if token.endswith('.') or token.endswith(':'):
+                    token = token[:-1]
+                token = token.strip()
+                
+                token_lower = token.lower()
+                
+                is_start = any(pattern in token_lower for pattern in start_patterns)
+                if is_start and "to begin" in token_lower:
+                    depth += 1
+                    body_statements.append(token)
+                elif token_lower == end_keyword:
+                    if depth == 0:
+                        break
+                    else:
+                        depth -= 1
+                        body_statements.append(token)
+                elif token:
+                    body_statements.append(token)
+        
+        return body_statements
 
+    def handle_traverse(self, statement):
         pattern_with_index = r'Traverse\s+(\w+)\s+with each\s+(\w+)\s+at\s+(\w+)\s+to begin'
         pattern_simple = r'Traverse\s+(\w+)\s+with each\s+(\w+)\s+to begin'
 
@@ -207,7 +265,7 @@ class SpellScriptInterpreter:
             index_var = None
             has_index = False
         else:
-            raise SyntaxError("use Traverse <array> with each <item> to begin: ... end traverse or Traverse <array> with each <item> at <index> to begin: ... end traverse")
+            raise SyntaxError("use Traverse <array> with each <item> to begin: ... end traverse")
 
         if array_name not in self.variables:
             raise NameError(f"unknown entity {array_name}")
@@ -216,21 +274,7 @@ class SpellScriptInterpreter:
         if not isinstance(array, list):
             raise TypeError(f"{array_name} is not a collection")
 
-        body_statements = []
-        while self.current_token_index < len(self.tokens) - 1:
-            token = self.tokens[self.current_token_index]
-            self.current_token_index += 1
-
-            token = token.strip()
-            if token.endswith('.') or token.endswith(':'):
-                token = token[:-1]
-            token = token.strip()
-
-            if token.lower() == "end traverse":
-                break
-
-            if token:
-                body_statements.append(token)
+        body_statements = self.collect_block_from_context("end traverse")
 
         if not body_statements:
             raise SyntaxError("traverse body is empty")
@@ -243,8 +287,18 @@ class SpellScriptInterpreter:
             if has_index:
                 self.variables[index_var] = idx
 
-            for body_statement in body_statements:
-                self.execute_statement(body_statement)
+            context = ExecutionContext(source='body', body_statements=body_statements, start_index=0)
+            self.context_stack.append(context)
+
+            while context.current_index < len(context.body_statements):
+                body_statement = context.body_statements[context.current_index]
+                context.current_index += 1
+                result = self.execute_statement(body_statement)
+                if result is not None:
+                    self.context_stack.pop()
+                    return result
+
+            self.context_stack.pop()
 
         if saved_item is not None:
             self.variables[item_var] = saved_item
@@ -256,6 +310,38 @@ class SpellScriptInterpreter:
                 self.variables[index_var] = saved_index
             elif index_var in self.variables:
                 del self.variables[index_var]
+
+    def split_collection_items(self, items_str):
+        items = []
+        current_tokens = []
+        i = 0
+        tokens = items_str.split()
+
+        while i < len(tokens):
+            token = tokens[i]
+            token_lower = token.lower()
+
+            if token_lower == "and" and i + 1 < len(tokens) and tokens[i + 1].lower() == "through":
+                if current_tokens:
+                    items.append(" ".join(current_tokens))
+                    current_tokens = []
+                i += 1
+                continue
+            elif token_lower == "and" and (not current_tokens or "ritual" not in " ".join(current_tokens).lower()):
+                if current_tokens:
+                    items.append(" ".join(current_tokens))
+                    current_tokens = []
+                i += 1
+                continue
+            else:
+                current_tokens.append(token)
+
+            i += 1
+
+        if current_tokens:
+            items.append(" ".join(current_tokens))
+
+        return items
 
     def evaluate_ritual_call(self, ritual_call):
         pattern = r'(\w+)(?: with (.+))?'
@@ -299,11 +385,18 @@ class SpellScriptInterpreter:
         for p, a in zip(params, args):
             self.variables[p] = a
 
+        context = ExecutionContext(source='body', body_statements=func["body"], start_index=0)
+        self.context_stack.append(context)
+        
         result = None
-        for body_statement in func["body"]:
+        while context.current_index < len(context.body_statements):
+            body_statement = context.body_statements[context.current_index]
+            context.current_index += 1
             result = self.execute_statement(body_statement)
-            if result is not None and body_statement.strip().lower().startswith("return"):
+            if result is not None:
                 break
+
+        self.context_stack.pop()
 
         for i, (param, var_name) in enumerate(zip(params, arg_var_names)):
             if var_name is not None and param in self.variables:
@@ -409,21 +502,7 @@ class SpellScriptInterpreter:
             name, params_str = match.groups()
             params = [p.strip() for p in params_str.split("and")]
 
-            body_statements = []
-            while self.current_token_index < len(self.tokens) - 1:
-                token = self.tokens[self.current_token_index]
-                self.current_token_index += 1
-                
-                token = token.strip()
-                if token.endswith('.') or token.endswith(':'):
-                    token = token[:-1]
-                token = token.strip()
-
-                if token.lower() == "end ritual":
-                    break
-
-                if token:
-                    body_statements.append(token)
+            body_statements = self.collect_block_from_context("end ritual")
 
             if not body_statements:
                 raise SyntaxError("ritual body is empty")
@@ -491,11 +570,18 @@ class SpellScriptInterpreter:
         for p, a in zip(params, args):
             self.variables[p] = a
         
+        context = ExecutionContext(source='body', body_statements=func["body"], start_index=0)
+        self.context_stack.append(context)
+        
         result = None
-        for body_statement in func["body"]:
+        while context.current_index < len(context.body_statements):
+            body_statement = context.body_statements[context.current_index]
+            context.current_index += 1
             result = self.execute_statement(body_statement)
-            if result is not None and body_statement.strip().lower().startswith("return"):
+            if result is not None:
                 break
+        
+        self.context_stack.pop()
         
         for i, (param, var_name) in enumerate(zip(params, arg_var_names)):
             if var_name is not None and param in self.variables:
@@ -556,28 +642,25 @@ class SpellScriptInterpreter:
                     if s:
                         body_tokens.append(s)
         
-        while self.current_token_index < len(self.tokens) - 1:
-            token = self.tokens[self.current_token_index]
-            token = token.strip()
-            if token.endswith('.') or token.endswith(':'):
-                token = token[:-1]
-            token = token.strip()
-            
-            if token.lower() == "end loop":
-                self.current_token_index += 1
-                break
-            
-            if token:
-                body_tokens.append(token)
-            self.current_token_index += 1
+        if not body_tokens:
+            body_tokens = self.collect_block_from_context("end loop")
         
-
         if not body_tokens:
             raise SyntaxError("loop body is empty")
         
         for _ in range(count):
-            for action_statement in body_tokens:
-                self.execute_statement(action_statement)
+            context = ExecutionContext(source='body', body_statements=body_tokens, start_index=0)
+            self.context_stack.append(context)
+            
+            while context.current_index < len(context.body_statements):
+                action_statement = context.body_statements[context.current_index]
+                context.current_index += 1
+                result = self.execute_statement(action_statement)
+                if result is not None:
+                    self.context_stack.pop()
+                    return result
+            
+            self.context_stack.pop()
 
     def parse_number(self, text):
         text = text.strip()
@@ -648,8 +731,16 @@ class SpellScriptInterpreter:
             match = re.search(pattern, expr, re.IGNORECASE)
             if match:
                 items_str = match.group(1).strip()
-                items = [item.strip() for item in items_str.split(" and ")]
-                return [self.evaluate_expression(item) for item in items]
+                items = self.split_collection_items(items_str)
+                return [self.evaluate_expression(item.strip()) for item in items]
+        
+        if " bound with " in expr.lower():
+            parts = re.split(r'\s+bound with\s+', expr, flags=re.IGNORECASE)
+            result = ""
+            for part in parts:
+                val = self.evaluate_expression(part.strip())
+                result += str(val)
+            return result
         
         if " at position " in expr.lower():
             pattern = r'(\w+)\s+at position\s+(.+)'
@@ -687,10 +778,14 @@ class SpellScriptInterpreter:
             return len(array)
         
         if "through ritual" in expr.lower():
-            pattern = r'through ritual (.+)'
+            pattern = r'through ritual\s+(\w+)(?:\s+with\s+(.+?))?(?=\s+and\s+through|$)'
             match = re.search(pattern, expr, re.IGNORECASE)
             if match:
-                ritual_call = match.group(1).strip()
+                name = match.group(1)
+                args = match.group(2).strip() if match.group(2) else None
+                ritual_call = name
+                if args:
+                    ritual_call += " with " + args
                 return self.evaluate_ritual_call(ritual_call)
 
         if "invoke the ritual" in expr.lower():
@@ -709,14 +804,6 @@ class SpellScriptInterpreter:
                     return self.evaluate_expression(remaining)
 
                 return result
-        
-        if " bound with " in expr.lower():
-            parts = re.split(r'\s+bound with\s+', expr, flags=re.IGNORECASE)
-            result = ""
-            for part in parts:
-                val = self.evaluate_expression(part.strip())
-                result += str(val)
-            return result
         
         if "multiplied by" in expr.lower():
             parts = re.split(r'\s+multiplied by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
@@ -787,7 +874,7 @@ class SpellScriptInterpreter:
 
 def main():
     if len(sys.argv) < 2:
-        print("usage python spellscript.py <spell_filename>.spell")
+        print("usage: python spellscript.py <spell_filename>.spell")
         sys.exit(1)
     with open(sys.argv[1], 'r') as f:
         text = f.read()
