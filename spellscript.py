@@ -10,7 +10,11 @@ class SpellScriptInterpreter:
         self.current_token_index = 0
         self.last_return_value = None
 
+    def remove_comments(self, text):
+        return re.sub(r'\([^)]*\)', '', text)
+
     def tokenize(self, spell_text):
+        spell_text = self.remove_comments(spell_text)
         pattern = r'((?:[^\.":"]|"[^"]*")+[\.:])'
         statements = re.findall(pattern, spell_text)
         return [s.strip() for s in statements if s.strip()]

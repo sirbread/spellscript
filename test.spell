@@ -1,16 +1,16 @@
-Begin the grimoire. Summon the numbers with essence of collection holding 1 and 2 and 3 and 4 and 5. Inscribe whispers of "Simple traversal:". Traverse numbers with each num to begin: Inscribe num. end traverse.
+(comments get stripped before running) Begin the grimoire. Summon the numbers with essence of collection holding 1 and 2 and 3 and 4 and 5. Inscribe whispers of "Simple traversal:". Traverse numbers with each num to begin: Inscribe num. end traverse.
 
 Inscribe whispers of "With index:".
 Traverse numbers with each num at idx to begin:
-    Summon the msg with essence of whispers of "Position " bound with idx bound with whispers of ": " bound with num.
+    Summon the msg with essence of whispers of "Position " bound with idx bound with whispers of ": " bound with num. (ok)
     Inscribe msg.
 end traverse.
 
-Summon the names with essence of collection holding whispers of "Alice" and whispers of "Bob" and whispers of "Charlie".
+Summon the names with essence of collection holding whispers of "Alice" and whispers (brooooo) of "Bob" and whispers of "Charlie".
 Inscribe whispers of "Names:".
 Traverse names with each name to begin:
     Summon the greeting with essence of whispers of "Hello, " bound with name bound with whispers of "!".
     Inscribe greeting.
 end traverse.
 
-Close the grimoire.
+Close the grimoire. (chat is this real)
