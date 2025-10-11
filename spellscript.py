@@ -11,7 +11,7 @@ class SpellScriptInterpreter:
         self.last_return_value = None
 
     def tokenize(self, spell_text):
-        pattern = r'((?:[^\."]|"[^"]*")+\.)'
+        pattern = r'((?:[^\.":"]|"[^"]*")+[\.:])'
         statements = re.findall(pattern, spell_text)
         return [s.strip() for s in statements if s.strip()]
 
@@ -39,7 +39,7 @@ class SpellScriptInterpreter:
 
     def execute_statement(self, statement):
         statement = statement.strip()
-        if statement.endswith('.'):
+        if statement.endswith('.') or statement.endswith(':'):
             statement = statement[:-1]
         if not statement:
             return
@@ -259,25 +259,25 @@ class SpellScriptInterpreter:
             pattern = r'Conjure ritual named (\w+) with (.+?) to begin'
             match = re.match(pattern, statement, re.IGNORECASE)
             if not match:
-                raise SyntaxError("use Conjure ritual named <name> with <params> to begin ... end ritual")
+                raise SyntaxError("use Conjure ritual named <name> with <params> to begin: ... end ritual")
             name, params_str = match.groups()
             params = [p.strip() for p in params_str.split("and")]
 
             body_statements = []
             while self.current_token_index < len(self.tokens) - 1:
                 token = self.tokens[self.current_token_index]
+                self.current_token_index += 1
+                
                 token = token.strip()
-                if token.endswith('.'):
+                if token.endswith('.') or token.endswith(':'):
                     token = token[:-1]
                 token = token.strip()
 
                 if token.lower() == "end ritual":
-                    self.current_token_index += 1
                     break
 
                 if token:
                     body_statements.append(token)
-                self.current_token_index += 1
 
             if not body_statements:
                 raise SyntaxError("ritual body is empty")
@@ -285,6 +285,20 @@ class SpellScriptInterpreter:
             self.functions[name] = {
                 "params": params,
                 "body": body_statements
+            }
+        else:
+            pattern = r'Conjure ritual named (\w+) with (.+?) to (.+)'
+            match = re.match(pattern, statement, re.IGNORECASE)
+            if not match:
+                raise SyntaxError("use Conjure ritual named <name> with <params> to <body>")
+            name, params_str, body = match.groups()
+            params = [p.strip() for p in params_str.split("and")]
+            body = body.strip()
+            if body.endswith('.') or body.endswith(':'):
+                body = body[:-1].strip()
+            self.functions[name] = {
+                "params": params,
+                "body": [body]
             }
 
     def handle_return(self, statement):
@@ -391,7 +405,7 @@ class SpellScriptInterpreter:
                 body_statements = re.split(r'\.\s+', body_text)
                 for s in body_statements:
                     s = s.strip()
-                    if s.endswith('.'):
+                    if s.endswith('.') or s.endswith(':'):
                         s = s[:-1].strip()
                     if s:
                         body_tokens.append(s)
@@ -399,7 +413,7 @@ class SpellScriptInterpreter:
         while self.current_token_index < len(self.tokens) - 1:
             token = self.tokens[self.current_token_index]
             token = token.strip()
-            if token.endswith('.'):
+            if token.endswith('.') or token.endswith(':'):
                 token = token[:-1]
             token = token.strip()
             
@@ -479,28 +493,6 @@ class SpellScriptInterpreter:
 
                 return result
         
-        if "greater by" in expr.lower():
-            parts = re.split(r'\s+greater by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
-            if len(parts) == 2:
-                a = self.evaluate_expression(parts[0].strip())
-                b = self.evaluate_expression(parts[1].strip())
-                if not isinstance(a, (int, float)):
-                    raise TypeError(f"Expected number, got {type(a).__name__}: {a}")
-                if not isinstance(b, (int, float)):
-                    raise TypeError(f"Expected number, got {type(b).__name__}: {b}")
-                return a + b
-        
-        if "lesser by" in expr.lower():
-            parts = re.split(r'\s+lesser by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
-            if len(parts) == 2:
-                a = self.evaluate_expression(parts[0].strip())
-                b = self.evaluate_expression(parts[1].strip())
-                if not isinstance(a, (int, float)):
-                    raise TypeError(f"Expected number, got {type(a).__name__}: {a}")
-                if not isinstance(b, (int, float)):
-                    raise TypeError(f"Expected number, got {type(b).__name__}: {b}")
-                return a - b
-        
         if "multiplied by" in expr.lower():
             parts = re.split(r'\s+multiplied by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
             if len(parts) == 2:
@@ -527,7 +519,28 @@ class SpellScriptInterpreter:
                 if isinstance(a, int) and isinstance(b, int) and result.is_integer():
                     return int(result)
                 return result
-
+        
+        if "greater by" in expr.lower():
+            parts = re.split(r'\s+greater by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
+            if len(parts) == 2:
+                a = self.evaluate_expression(parts[0].strip())
+                b = self.evaluate_expression(parts[1].strip())
+                if not isinstance(a, (int, float)):
+                    raise TypeError(f"Expected number, got {type(a).__name__}: {a}")
+                if not isinstance(b, (int, float)):
+                    raise TypeError(f"Expected number, got {type(b).__name__}: {b}")
+                return a + b
+        
+        if "lesser by" in expr.lower():
+            parts = re.split(r'\s+lesser by\s+', expr, flags=re.IGNORECASE, maxsplit=1)
+            if len(parts) == 2:
+                a = self.evaluate_expression(parts[0].strip())
+                b = self.evaluate_expression(parts[1].strip())
+                if not isinstance(a, (int, float)):
+                    raise TypeError(f"Expected number, got {type(a).__name__}: {a}")
+                if not isinstance(b, (int, float)):
+                    raise TypeError(f"Expected number, got {type(a).__name__}: {b}")
+                return a - b
 
         if expr in self.variables:
             return self.variables[expr]
