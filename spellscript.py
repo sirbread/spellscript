@@ -62,6 +62,8 @@ class SpellScriptInterpreter:
             self.handle_inscribe(statement)
         elif cmd == "inquire":
             self.handle_inquire(statement)
+        elif cmd == "append":
+            self.handle_append(statement)
         elif cmd == "ponder":
             self.handle_ponder(words)
         elif cmd == "banish":
@@ -97,6 +99,35 @@ class SpellScriptInterpreter:
         self.variables[name] = val
 
     def handle_enchant(self, statement):
+        if " at position " in statement.lower():
+            pattern = r'Enchant\s+(\w+)\s+at position\s+(.+?)\s+with\s+(.+)'
+            match = re.match(pattern, statement, re.IGNORECASE)
+            if not match:
+                raise SyntaxError("use Enchant <array> at position <index> with <value>")
+            
+            array_name = match.group(1)
+            index_expr = match.group(2).strip()
+            value_expr = match.group(3).strip()
+            
+            if array_name not in self.variables:
+                raise NameError(f"unknown entity {array_name}")
+            
+            array = self.variables[array_name]
+            if not isinstance(array, list):
+                raise TypeError(f"{array_name} is not a collection")
+            
+            index = self.evaluate_expression(index_expr)
+            if not isinstance(index, int):
+                raise TypeError(f"index must be a number, got {type(index).__name__}")
+            
+            value = self.evaluate_expression(value_expr)
+            
+            if index < 0 or index >= len(array):
+                raise IndexError(f"index {index} out of range for collection of length {len(array)}")
+            
+            array[index] = value
+            return
+        
         pattern = r'Enchant\s+(\w+)\s+(.+)'
         match = re.match(pattern, statement, re.IGNORECASE)
         if not match:
@@ -128,6 +159,25 @@ class SpellScriptInterpreter:
         var_name = match.group(2)
         user_input = input(prompt + " ")
         self.variables[var_name] = user_input
+
+    def handle_append(self, statement):
+        pattern = r'Append\s+(.+?)\s+to\s+(\w+)'
+        match = re.match(pattern, statement, re.IGNORECASE)
+        if not match:
+            raise SyntaxError("use Append <value> to <array>")
+
+        value_expr = match.group(1).strip()
+        array_name = match.group(2).strip()
+
+        if array_name not in self.variables:
+            raise NameError(f"unknown entity {array_name}")
+
+        array = self.variables[array_name]
+        if not isinstance(array, list):
+            raise TypeError(f"{array_name} is not a collection")
+
+        value = self.evaluate_expression(value_expr)
+        array.append(value)
 
     def evaluate_ritual_call(self, ritual_call):
         pattern = r'(\w+)(?: with (.+))?'
@@ -192,13 +242,18 @@ class SpellScriptInterpreter:
 
     def handle_inscribe(self, statement):
         msg = statement[len("inscribe "):].strip()
-        if msg in self.variables:
-            print(self.variables[msg])
-            return
         if msg.startswith('whispers of "') and msg.endswith('"'):
             print(msg[len('whispers of "'):-1])
             return
-        print(msg)
+        
+        try:
+            val = self.evaluate_expression(msg)
+            if isinstance(val, list):
+                print(f"[{', '.join(str(v) for v in val)}]")
+            else:
+                print(val)
+        except:
+            print(msg)
 
     def handle_ponder(self, words):
         if len(words) >= 4 and words[1] == "for" and words[3] == "moments":
@@ -509,6 +564,49 @@ class SpellScriptInterpreter:
 
     def evaluate_expression(self, expr):
         expr = expr.strip()
+        
+        if "collection holding" in expr.lower():
+            pattern = r'collection holding (.+)'
+            match = re.search(pattern, expr, re.IGNORECASE)
+            if match:
+                items_str = match.group(1).strip()
+                items = [item.strip() for item in items_str.split(" and ")]
+                return [self.evaluate_expression(item) for item in items]
+        
+        if " at position " in expr.lower():
+            pattern = r'(\w+)\s+at position\s+(.+)'
+            match = re.match(pattern, expr, re.IGNORECASE)
+            if match:
+                array_name = match.group(1).strip()
+                index_expr = match.group(2).strip()
+
+                if array_name not in self.variables:
+                    raise NameError(f"unknown entity {array_name}")
+
+                array = self.variables[array_name]
+                if not isinstance(array, list):
+                    raise TypeError(f"{array_name} is not a collection")
+
+                index = self.evaluate_expression(index_expr)
+                if not isinstance(index, int):
+                    raise TypeError(f"index must be a number, got {type(index).__name__}")
+
+                if index < 0 or index >= len(array):
+                    raise IndexError(f"index {index} out of range for collection of length {len(array)}")
+
+                return array[index]
+        
+        if expr.lower().startswith("length of "):
+            array_name = expr[len("length of "):].strip()
+            
+            if array_name not in self.variables:
+                raise NameError(f"unknown entity {array_name}")
+            
+            array = self.variables[array_name]
+            if not isinstance(array, list):
+                raise TypeError(f"{array_name} is not a collection")
+            
+            return len(array)
         
         if "through ritual" in expr.lower():
             pattern = r'through ritual (.+)'

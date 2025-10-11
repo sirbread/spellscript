@@ -1,18 +1,28 @@
 Begin the grimoire.
 
-Inquire whispers of "What is your first name?" into firstName.
-Inquire whispers of "What is your last name?" into lastName.
+Summon the scrolls with essence of collection holding 1 and 2 and 3.
+Inscribe whispers of "Initial collection:".
+Inscribe scrolls.
 
-Summon the fullName with essence of firstName bound with whispers of " " bound with lastName.
-Summon the greeting with essence of whispers of "Hello, " bound with fullName bound with whispers of "!".
+Append 4 to scrolls.
+Append 5 to scrolls.
+Inscribe whispers of "After appending:".
+Inscribe scrolls.
 
-Inscribe greeting.
+Summon the first with essence of scrolls at position 0.
+Inscribe whispers of "First element:".
+Inscribe first.
 
-Inquire whispers of "Enter your age:" into ageText.
-Transmute ageText into number.
-Summon the age with essence of ageText.
+Enchant scrolls at position 1 with 10.
+Inscribe whispers of "After changing position 1:".
+Inscribe scrolls.
 
-Summon the message with essence of whispers of "You are " bound with age bound with whispers of " years old.".
-Inscribe message.
+Summon the count with essence of length of scrolls.
+Inscribe whispers of "Length:".
+Inscribe count.
+
+Summon the names with essence of collection holding whispers of "Alice" and whispers of "Bob" and whispers of "Charlie".
+Inscribe whispers of "Names:".
+Inscribe names.
 
 Close the grimoire.
