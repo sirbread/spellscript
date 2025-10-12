@@ -1,3 +1,6 @@
+# spellscript interpreter
+# open sourced and documented at: https://github.com/sirbread/spellscript
+
 import re
 import sys
 import time
@@ -874,7 +877,7 @@ class SpellScriptInterpreter:
 
 def main():
     if len(sys.argv) < 2:
-        print("usage: python spellscript.py <spell_filename>.spell")
+        print("usage: python spellscript.py <filename>.spell")
         sys.exit(1)
     with open(sys.argv[1], 'r') as f:
         text = f.read()

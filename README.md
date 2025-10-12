@@ -31,7 +31,7 @@ close the grimoire.
 ## run ts
 1. clone thy repo
 2. make sure you have python 3.6 +
-3. create a file called `hello.spell`:
+3. create a file called `<filename>.spell`:
 4. then run `python spellscript.py your-spell.spell`
 
 ## overview
