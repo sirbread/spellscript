@@ -1,4 +1,7 @@
-# spellscript
+<div align="center">
+  <h1>spellscript</h1>
+  <img src="https://hc-cdn.hel1.your-objectstorage.com/s/v3/70eec7a3eb552f1b5747b73942b2ee1daac25647_untitled_design.png" alt="image" width="300">
+</div>
 
 an esoteric programming language where code reads like magical incantations from an ancient spellbook. every program is a "spell" written in a "grimoire," so theorhetically, you can write all your code english essay style due to its no newline/indentation requirement.
 
