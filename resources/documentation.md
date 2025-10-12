@@ -8,7 +8,7 @@
 
 ## table of contents
 
-1. [overview](#overview)
+1. [table of contents](#table-of-contents)
 2. [getting started](#getting-started)
 3. [program structure](#program-structure)
 4. [syntax rules](#syntax-rules)
@@ -17,7 +17,7 @@
 7. [operators](#operators)
 8. [conditionals](#conditionals)
 9. [loops](#loops)
-10. [arrays](#arrays)
+10. [arrays](#arrays-1)
 11. [functions](#functions)
 12. [string operations](#string-operations)
 13. [type conversion](#type-conversion)
