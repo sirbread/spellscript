@@ -11,8 +11,8 @@ an esoteric programming language where code reads like magical incantations from
 begin the grimoire.
 summon the power with essence of 7.
 conjure ritual named amplify with value to return value multiplied by value.
-summon the result with essence of through ritual amplify with power.
-inscribe whispers of "the power is amplified: " bound with result.
+enchant power with essence 0 of through ritual amplify with power.
+inscribe whispers of "the power is amplified: " bound with power.
 close the grimoire.
 ```
 
