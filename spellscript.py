@@ -627,11 +627,17 @@ class SpellScriptInterpreter:
 
     def handle_loop(self, statement):
         statement = statement.strip()
-        match = re.search(r'repeat the incantation (\d+) times', statement.lower())
+        match = re.search(r'repeat the incantation (\w+) times', statement.lower())
         if not match:
-            raise SyntaxError("use Repeat the incantation <number> times do <action>")
-        count = int(match.group(1))
-        
+            raise SyntaxError("use Repeat the incantation <number> to begin <action>")
+        count_str = match.group(1)
+        try:
+            count = int(count_str)
+        except ValueError:
+            if count_str in self.variables:
+                count = int(self.variables[count_str])
+            else:
+                raise SyntaxError("use Repeat the incantation <number> to begin <action>")
         body_tokens = []
         if "do" in statement.lower():
             do_pos = statement.lower().find("do") + 2
